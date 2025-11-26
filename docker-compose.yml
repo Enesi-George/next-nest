@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: appointments
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      DB_NAME: appointments
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      GOOGLE_SERVICE_ACCOUNT_PATH: /app/service-account.json
+    depends_on:
+      - postgres
+    volumes:
+      - ./service-account.json:/app/service-account.json
+    command: sh -c "npm run build && npm run seed && npm run start:prod"
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
