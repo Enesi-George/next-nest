@@ -4,23 +4,23 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   app.useGlobalPipes(new ValidationPipe());
   
   app.enableCors({
-    origin: true,
+    origin: true, // Allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204
   });
+
+  // Use Railway's PORT environment variable and bind to 0.0.0.0
+  const port = process.env.PORT || 3001;
+  const host = '0.0.0.0'; // Important for Railway
   
-  const port = parseInt(process.env.PORT || '3001', 10);
-  
-  // Just pass the port, NestJS should handle the host
-  await app.listen(port);
-  
-  console.log(`Application is running on port: ${port}`);
+  await app.listen(port, host);
+  console.log(`🚀 Application is running on: http://${host}:${port}`);
 }
 bootstrap();
