@@ -9,7 +9,7 @@ async function bootstrap() {
     app.enableCors({
     origin: [
       'http://localhost:3000',
-      'https://next-nest-production-9092.up.railway.app/',
+      'https://next-nest-gamma.vercel.app/',
     ],
     credentials: true,
   });
