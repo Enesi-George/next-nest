@@ -4,8 +4,9 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  
   app.useGlobalPipes(new ValidationPipe());
+  
   app.enableCors({
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -14,11 +15,12 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 204
   });
-
-  const port = process.env.PORT || 3001;
-  await app.listen(port, '0.0.0.0');
-
-  console.log(`Application is running on: ${await app.getUrl()}`);
-
+  
+  const port = parseInt(process.env.PORT || '3001', 10);
+  
+  // Just pass the port, NestJS should handle the host
+  await app.listen(port);
+  
+  console.log(`Application is running on port: ${port}`);
 }
 bootstrap();
