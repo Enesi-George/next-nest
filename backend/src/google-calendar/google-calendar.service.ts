@@ -15,46 +15,76 @@ export class GoogleCalendarService {
 
   private initializeCalendar() {
     try {
+      // FIRST: Check for JSON environment variable (Railway deployment)
+      const serviceAccountJson = this.configService.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+      
+      if (serviceAccountJson) {
+        this.logger.log('🔍 Found GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
+        try {
+          const serviceAccount = JSON.parse(serviceAccountJson);
+          this.logger.log(`✅ Successfully parsed service account JSON for: ${serviceAccount.client_email}`);
+          
+          this.calendarId = this.configService.get('GOOGLE_CALENDAR_ID') || 'primary';
+          this.logger.log(`📅 Using calendar ID: ${this.calendarId}`);
+
+          const auth = new google.auth.GoogleAuth({
+            credentials: serviceAccount,
+            scopes: ['https://www.googleapis.com/auth/calendar'],
+          });
+
+          this.calendar = google.calendar({ version: 'v3', auth });
+          this.logger.log('✅ Google Calendar service initialized from environment variable');
+          
+          this.testCalendarConnection();
+          return;
+        } catch (parseError) {
+          this.logger.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
+          // Continue to try file path method
+        }
+      }
+
+      // SECOND: Fallback to file path (local development)
       const serviceAccountPath = this.configService.get('GOOGLE_SERVICE_ACCOUNT_PATH');
+      this.logger.log(`🔍 Service account path: ${serviceAccountPath}`);
       
-      this.logger.log(`Service account path: ${serviceAccountPath}`);
-      
-      if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
-        this.logger.warn('Service account file not found. Using mock mode.');
+      if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+        this.logger.log('📁 Using service account from file');
+        this.calendarId = this.configService.get('GOOGLE_CALENDAR_ID') || 'primary';
+        this.logger.log(`📅 Using calendar ID: ${this.calendarId}`);
+
+        const auth = new google.auth.GoogleAuth({
+          keyFile: serviceAccountPath,
+          scopes: ['https://www.googleapis.com/auth/calendar'],
+        });
+
+        this.calendar = google.calendar({ version: 'v3', auth });
+        this.logger.log('✅ Google Calendar service initialized from file');
+        
+        this.testCalendarConnection();
         return;
       }
 
-      this.calendarId = this.configService.get('GOOGLE_CALENDAR_ID') || 'primary';
-      this.logger.log(`Using calendar ID: ${this.calendarId}`);
-
-      const auth = new google.auth.GoogleAuth({
-        keyFile: serviceAccountPath,
-        scopes: ['https://www.googleapis.com/auth/calendar'],
-      });
-
-      this.calendar = google.calendar({ version: 'v3', auth });
-      
-      this.testCalendarConnection();
+      this.logger.warn('❌ No Google service account configuration found. Using mock mode.');
       
     } catch (error) {
-      this.logger.error('Failed to initialize Google Calendar service:', error);
+      this.logger.error('❌ Failed to initialize Google Calendar service:', error);
       if (error instanceof Error) {
-        this.logger.error(`Error details: ${error.message}`);
+        this.logger.error(`❌ Error details: ${error.message}`);
       }
     }
   }
 
   private async testCalendarConnection() {
     try {
-      this.logger.log('Testing Google Calendar connection...');
+      this.logger.log('🔍 Testing Google Calendar connection...');
       const response = await this.calendar.calendars.get({
         calendarId: this.calendarId,
       });
-      this.logger.log(`Google Calendar connection successful: ${response.data.summary}`);
+      this.logger.log(`✅ Google Calendar connection successful: ${response.data.summary}`);
     } catch (error) {
-      this.logger.error('Google Calendar connection test failed:', error);
+      this.logger.error('❌ Google Calendar connection test failed:', error);
       if (error instanceof Error) {
-        this.logger.error(`Connection error: ${error.message}`);
+        this.logger.error(`❌ Connection error: ${error.message}`);
       }
     }
   }
@@ -67,7 +97,7 @@ export class GoogleCalendarService {
     attendees?: { email: string }[];
   }) {
     if (!this.calendar) {
-      this.logger.log('Using mock event creation (calendar service not initialized)');
+      this.logger.log('🎭 Using mock event creation (calendar service not initialized)');
       return this.createMockEvent(eventDetails);
     }
 
@@ -88,8 +118,7 @@ export class GoogleCalendarService {
     };
 
     try {
-      this.logger.log('Creating Google Calendar event...');
-      this.logger.log(`Event details: ${JSON.stringify(event)}`);
+      this.logger.log('📅 Creating Google Calendar event...');
       
       const response = await this.calendar.events.insert({
         calendarId: this.calendarId,
@@ -97,15 +126,15 @@ export class GoogleCalendarService {
         sendUpdates: 'none',
       });
 
-      this.logger.log(`Google Calendar event created successfully: ${response.data.id}`);
-      this.logger.log(`Event link: ${response.data.htmlLink}`);
+      this.logger.log(`✅ Google Calendar event created successfully: ${response.data.id}`);
+      this.logger.log(`🔗 Event link: ${response.data.htmlLink}`);
       return response.data;
     } catch (error: any) {
-      this.logger.error('Failed to create Google Calendar event:');
-      this.logger.error(`Error message: ${error.message}`);
-      this.logger.error(`Error code: ${error.code}`);
-      this.logger.error(`Error response: ${JSON.stringify(error.response?.data)}`);
+      this.logger.error('❌ Failed to create Google Calendar event:');
+      this.logger.error(`❌ Error message: ${error.message}`);
+      this.logger.error(`❌ Error code: ${error.code}`);
       
+      // Fall back to mock
       return this.createMockEvent(eventDetails);
     }
   }
@@ -118,7 +147,7 @@ export class GoogleCalendarService {
     attendees?: { email: string }[];
   }) {
     const mockEventId = `mock-event-${Date.now()}`;
-    this.logger.log(`Created mock Google Calendar event: ${mockEventId}`);
+    this.logger.log(`🎭 Created mock Google Calendar event: ${mockEventId}`);
     
     return {
       id: mockEventId,
