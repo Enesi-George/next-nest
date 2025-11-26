@@ -5,7 +5,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Add root endpoint for health checks
   app.getHttpAdapter().get('/', (req, res) => {
     res.json({ 
       status: 'OK',
