@@ -50,3 +50,11 @@ GET /users - Get all users
 POST /users - Create new user
 
 DELETE /users/:id - Delete user
+
+
+# Hosted URL
+Homepage: https://next-nest-gamma.vercel.app
+admin: https://next-nest-gamma.vercel.app/admin
+
+
+
